@@ -14,7 +14,6 @@ if (!isset($pagina)) {
                 <li><a href="produtos.php" class="<?= ($pagina == 'Produtos') ? 'active' : '' ?>">Veiculos</a></li>
                 <li><a href="adicionar.php" class="<?= ($pagina == 'Adicionar') ? 'active' : '' ?>">Adicionar Veiculo</a></li>
                 <li><a href="relatorio.php" class="<?= ($pagina == 'Relatório') ? 'active' : '' ?>">Relatório</a></li>
-                <li><a href="index.php" class="<?= ($pagina == 'Relatório') ? 'active' : '' ?>">TESTEZAO MANEIRO EC2</a></li>
             </ul>
         </nav>
     </div>
