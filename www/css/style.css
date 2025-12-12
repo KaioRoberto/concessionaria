@@ -16,7 +16,7 @@ body.relatorio-page::before {
     top: 0;
     left: 0;
     width: 100%;
-    height: 99%;
+    height: 100%;
     z-index: 0;
     background-size: cover;
     background-position: center;
