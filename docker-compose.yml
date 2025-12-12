@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   # ------------------------------------
-  # 2. BANCO DE DADOS
+  # 2. BANCO DE DADOS DA APLICAÇÃO
   # ------------------------------------
   db:
     image: mysql:5.7
@@ -33,24 +33,37 @@ services:
     restart: unless-stopped
 
   # ------------------------------------
-  # 3. ZABBIX SERVER
+  # 3. BANCO DE DADOS DO ZABBIX
+  # ------------------------------------
+  zabbix-db:
+    image: mysql:8.0
+    container_name: zabbix-db
+    environment:
+      MYSQL_ROOT_PASSWORD: zabbix
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+    volumes:
+      - zabbix_db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  # ------------------------------------
+  # 4. ZABBIX SERVER
   # ------------------------------------
   zabbix-server:
-    image: zabbix/zabbix-server-mysql:latest
+    image: zabbix/zabbix-server-mysql:alpine-6.4-latest
     container_name: zabbix-server
     depends_on:
-      - db
+      - zabbix-db
     environment:
-      DB_SERVER_HOST: db
-      MYSQL_DATABASE: concessionaria
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: root
+      DB_SERVER_HOST: zabbix-db
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: zabbix
       ZBX_STARTPOLLERS: 10
       ZBX_STARTTRAPPERS: 5
       ZBX_STARTPINGERS: 5
-      ZBX_DB_HOST: db
-      ZBX_DB_PORT: 3306
     ports:
       - "10051:10051"
     volumes:
@@ -58,28 +71,28 @@ services:
     restart: unless-stopped
 
   # ------------------------------------
-  # 4. ZABBIX WEB INTERFACE
+  # 5. ZABBIX WEB INTERFACE
   # ------------------------------------
   zabbix-web:
-    image: zabbix/zabbix-web-apache-mysql:latest
+    image: zabbix/zabbix-web-nginx-mysql:alpine-6.4-latest
     container_name: zabbix-web
     depends_on:
       - zabbix-server
-      - db
+      - zabbix-db
     environment:
       ZBX_SERVER_HOST: zabbix-server
       ZBX_SERVER_PORT: 10051
-      MYSQL_DATABASE: concessionaria
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: root
-      ZBX_DB_HOST: db
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: zabbix
+      ZBX_DB_HOST: zabbix-db
     ports:
       - "8081:8080"
     restart: unless-stopped
 
   # ------------------------------------
-  # 5. GRAFANA (Visualização)
+  # 6. GRAFANA (Visualização)
   # ------------------------------------
   grafana:
     image: grafana/grafana:latest
@@ -95,5 +108,6 @@ services:
 # ------------------------------------
 volumes:
   db_data:
+  zabbix_db_data:
   zabbix_server_data:
   grafana_data:
