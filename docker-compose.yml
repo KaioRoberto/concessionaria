@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # ------------------------------------
+  # 1. APLICAÇÃO (PHP / Back-end)
+  # ------------------------------------
+  app:
+    build: .
+    container_name: app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./www:/var/www/html
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  # ------------------------------------
+  # 2. BANCO DE DADOS
+  # ------------------------------------
+  db:
+    image: mysql:5.7
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: concessionaria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./mysql.cnf:/etc/mysql/conf.d/mysql.cnf
+    restart: unless-stopped
+
+  # ------------------------------------
+  # 3. ZABBIX SERVER
+  # ------------------------------------
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:latest
+    container_name: zabbix-server
+    depends_on:
+      - db
+    environment:
+      DB_SERVER_HOST: db
+      MYSQL_DATABASE: concessionaria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+      ZBX_STARTPOLLERS: 10
+      ZBX_STARTTRAPPERS: 5
+      ZBX_STARTPINGERS: 5
+      ZBX_DB_HOST: db
+      ZBX_DB_PORT: 3306
+    ports:
+      - "10051:10051"
+    volumes:
+      - zabbix_server_data:/var/lib/zabbix
+    restart: unless-stopped
+
+  # ------------------------------------
+  # 4. ZABBIX WEB INTERFACE
+  # ------------------------------------
+  zabbix-web:
+    image: zabbix/zabbix-web-apache-mysql:latest
+    container_name: zabbix-web
+    depends_on:
+      - zabbix-server
+      - db
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_PORT: 10051
+      MYSQL_DATABASE: concessionaria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+      ZBX_DB_HOST: db
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+
+  # ------------------------------------
+  # 5. GRAFANA (Visualização)
+  # ------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+# ------------------------------------
+# DEFINIÇÃO DOS VOLUMES
+# ------------------------------------
+volumes:
+  db_data:
+  zabbix_server_data:
+  grafana_data:
