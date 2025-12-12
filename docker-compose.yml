@@ -5,10 +5,10 @@ services:
   # 1. APLICAÇÃO (PHP / Back-end)
   # ------------------------------------
   app:
+    # ... (app continua o mesmo)
     build: .
-    container_name: app
     ports:
-      - "8080:80"
+      - "8080:80" 
     volumes:
       - ./www:/var/www/html
     depends_on:
@@ -16,11 +16,11 @@ services:
     restart: unless-stopped
 
   # ------------------------------------
-  # 2. BANCO DE DADOS DA APLICAÇÃO
+  # 2. BANCO DE DADOS (APENAS COM O ARQUIVO DE CORREÇÃO)
   # ------------------------------------
   db:
     image: mysql:5.7
-    container_name: mysql-db
+    container_name: mysql-db # Dando um nome fixo
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: concessionaria
@@ -29,41 +29,32 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-      - ./mysql.cnf:/etc/mysql/conf.d/mysql.cnf
+      - ./mysql.cnf:/etc/mysql/conf.d/mysql.cnf # MANTÉM A CORREÇÃO DE CHARSET
     restart: unless-stopped
-
+    
   # ------------------------------------
-  # 3. BANCO DE DADOS DO ZABBIX
-  # ------------------------------------
-  zabbix-db:
-    image: mysql:8.0
-    container_name: zabbix-db
-    environment:
-      MYSQL_ROOT_PASSWORD: zabbix
-      MYSQL_DATABASE: zabbix
-      MYSQL_USER: zabbix
-      MYSQL_PASSWORD: zabbix
-    volumes:
-      - zabbix_db_data:/var/lib/mysql
-    restart: unless-stopped
-
-  # ------------------------------------
-  # 4. ZABBIX SERVER
+  # 3. ZABBIX SERVER (Monitoramento)
   # ------------------------------------
   zabbix-server:
-    image: zabbix/zabbix-server-mysql:alpine-6.4-latest
-    container_name: zabbix-server
+    image: zabbix/zabbix-server-mysql:latest
+    container_name: zabbix-server-1 # Dando um nome fixo
     depends_on:
-      - zabbix-db
+      - db # Dependência simples
     environment:
-      DB_SERVER_HOST: zabbix-db
-      MYSQL_DATABASE: zabbix
-      MYSQL_USER: zabbix
-      MYSQL_PASSWORD: zabbix
-      MYSQL_ROOT_PASSWORD: zabbix
+      # Essas variáveis são cruciais para a inicialização
+      MYSQL_DATABASE: concessionaria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+      DB_SERVER_HOST: db # O NOME DO SERVIÇO DO BANCO DE DADOS
+      
+      # Variáveis para garantir que ele espere o DB ficar pronto
       ZBX_STARTPOLLERS: 10
       ZBX_STARTTRAPPERS: 5
       ZBX_STARTPINGERS: 5
+      ZBX_DB_HOST: db # Confirma a Hostname do DB
+      ZBX_DB_PORT: 3306 # Porta padrão do MySQL
+      
     ports:
       - "10051:10051"
     volumes:
@@ -71,32 +62,32 @@ services:
     restart: unless-stopped
 
   # ------------------------------------
-  # 5. ZABBIX WEB INTERFACE
+  # 4. ZABBIX WEB INTERFACE
   # ------------------------------------
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-mysql:alpine-6.4-latest
-    container_name: zabbix-web
+    image: zabbix/zabbix-web-apache-mysql:latest
+    container_name: zabbix-web-1
     depends_on:
       - zabbix-server
-      - zabbix-db
     environment:
-      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_HOST: zabbix-server-1 # APONTA PARA O NOME DO CONTAINER
       ZBX_SERVER_PORT: 10051
-      MYSQL_DATABASE: zabbix
-      MYSQL_USER: zabbix
-      MYSQL_PASSWORD: zabbix
-      MYSQL_ROOT_PASSWORD: zabbix
-      ZBX_DB_HOST: zabbix-db
+      # Repete as credenciais do DB
+      MYSQL_DATABASE: concessionaria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+      ZBX_DB_HOST: db
     ports:
       - "8081:8080"
     restart: unless-stopped
 
   # ------------------------------------
-  # 6. GRAFANA (Visualização)
+  # 5. GRAFANA (Visualização)
   # ------------------------------------
   grafana:
+    # ... (grafana continua o mesmo)
     image: grafana/grafana:latest
-    container_name: grafana
     ports:
       - "3000:3000"
     volumes:
@@ -108,6 +99,5 @@ services:
 # ------------------------------------
 volumes:
   db_data:
-  zabbix_db_data:
   zabbix_server_data:
   grafana_data:
