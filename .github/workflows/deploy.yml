@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.AWS_KEY }}          # chave privada .pem
           port: 22
           script: |
-            cd /home/ec2-user/meu-projeto
+            cd /home/ec2-user/concessionaria
             git pull origin ${{ github.ref_name }}
             docker-compose down
             docker-compose up -d --build
