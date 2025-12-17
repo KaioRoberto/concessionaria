@@ -1,24 +1,21 @@
 version: '3.8'
 
 services:
-  # ------------------------------------
-  # 1. APLICAÇÃO (PHP / Back-end)
-  # ------------------------------------
+  # ============================
+  # 1. APP PHP (CONCESSIONÁRIA)
+  # ============================
   app:
     build: .
-    container_name: app-php
+    container_name: concessionaria-app
     ports:
       - "8080:80"
     volumes:
       - ./www:/var/www/html
     depends_on:
-      - db
+      - mysql-app
     restart: unless-stopped
 
-  # ------------------------------------
-  # 2. BANCO DE DADOS DA APLICAÇÃO
-  # ------------------------------------
-  db:
+  mysql-app:
     image: mysql:5.7
     container_name: mysql-app
     environment:
@@ -27,53 +24,53 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql_app_data:/var/lib/mysql
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./mysql.cnf:/etc/mysql/conf.d/mysql.cnf
     restart: unless-stopped
 
-  # ------------------------------------
-  # 3. BANCO DE DADOS DO ZABBIX
-  # ------------------------------------
-  zabbix-mysql:
+  # ============================
+  # 2. MYSQL EXCLUSIVO ZABBIX
+  # ============================
+  mysql-zabbix:
     image: mysql:8.0
-    container_name: zabbix-mysql
+    container_name: mysql-zabbix
     environment:
-      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: zabbixroot
       MYSQL_DATABASE: zabbix
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: zabbix
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8
+      - --collation-server=utf8_bin
     volumes:
-      - zabbix_db_data:/var/lib/mysql
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8
-      --collation-server=utf8_bin
+      - mysql_zabbix_data:/var/lib/mysql
     restart: unless-stopped
 
-  # ------------------------------------
-  # 4. ZABBIX SERVER
-  # ------------------------------------
+  # ============================
+  # 3. ZABBIX SERVER
+  # ============================
   zabbix-server:
     image: zabbix/zabbix-server-mysql:latest
     container_name: zabbix-server
     depends_on:
-      - zabbix-mysql
+      - mysql-zabbix
     environment:
-      DB_SERVER_HOST: zabbix-mysql
+      DB_SERVER_HOST: mysql-zabbix
       MYSQL_DATABASE: zabbix
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: zabbix
-      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: zabbixroot
     ports:
       - "10051:10051"
     volumes:
       - zabbix_server_data:/var/lib/zabbix
     restart: unless-stopped
 
-  # ------------------------------------
-  # 5. ZABBIX WEB (NGINX)
-  # ------------------------------------
+  # ============================
+  # 4. ZABBIX WEB
+  # ============================
   zabbix-web:
     image: zabbix/zabbix-web-nginx-mysql:latest
     container_name: zabbix-web
@@ -81,32 +78,19 @@ services:
       - zabbix-server
     environment:
       ZBX_SERVER_HOST: zabbix-server
-      DB_SERVER_HOST: zabbix-mysql
+      DB_SERVER_HOST: mysql-zabbix
       MYSQL_DATABASE: zabbix
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: zabbix
-      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: zabbixroot
       PHP_TZ: America/Sao_Paulo
     ports:
-      - "8081:8080"
+      - "8081:8081"
     restart: unless-stopped
 
-  # ------------------------------------
-  # 6. ZABBIX AGENT (MONITORA O HOST)
-  # ------------------------------------
-  zabbix-agent:
-    image: zabbix/zabbix-agent:latest
-    container_name: zabbix-agent
-    privileged: true
-    depends_on:
-      - zabbix-server
-    environment:
-      ZBX_SERVER_HOST: zabbix-server
-    restart: unless-stopped
-
-  # ------------------------------------
-  # 7. GRAFANA
-  # ------------------------------------
+  # ============================
+  # 5. GRAFANA
+  # ============================
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -116,11 +100,8 @@ services:
       - grafana_data:/var/lib/grafana
     restart: unless-stopped
 
-# ------------------------------------
-# VOLUMES
-# ------------------------------------
 volumes:
-  db_data:
-  zabbix_db_data:
+  mysql_app_data:
+  mysql_zabbix_data:
   zabbix_server_data:
   grafana_data:
