@@ -1,6 +1,7 @@
 <?php
 include 'conexao.php';
 
+// comentario teste deploy ec2
 // Verifica se o formulário foi enviado
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nome = $_POST['nome'];
